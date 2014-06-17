@@ -10,28 +10,26 @@
 
 int n=0, m=0;
 
-void parse_text(int noText)
+void parse_text(int print, FILE *in)
 {
 	int i;
 	char buf[256], *p, *q, *r;
 	char lab[256][128];
 	char unit[256][128];
 	
-	while ( fgets(buf,256,stdin) != NULL ) {
+	while ( fgets(buf,256,in) != NULL ) {
 		if ( !strncmp("Binary:",buf,7))
 			break;
 		
 		if (!strncmp("No. Variables:",buf,14)) {
 			n = atoi(buf+15);
-			
 		}
 		else if (!strncmp("No. Points:",buf,11)) {
 			m = atoi(buf+12);
-			
 		}
 		else if (!strncmp("Variables:",buf,10)) {
 			for (i=0; i<n; i++) {
-				fgets(buf,256,stdin);
+				fgets(buf,256,in);
 				p = buf+1;
 				while (*p && !isblank(*p))
 					p++;
@@ -56,26 +54,19 @@ void parse_text(int noText)
 		}
 	}
 	
-	// printf("data_x %d\n",n);
-	// printf("data_y %d\n",m);
-	// printf("labels\n");
+	if (!print)
+		return;
 
-	if (!noText) {
+	printf("data_x %d\n",n);
+	printf("data_y %d\n",m);
+	printf("columns\n");
+
 	for (i=0; i<n; i++) {
-	    printf("\"%s\"",lab[i]);
-	    if (i<n-1)
-	    	printf(", ");
+	    printf("  '%s'\n",lab[i]);
 	}
-	putchar('\n');
-	}
-	/*
-	printf("quantity\n");
-	for (i=0; i<n; i++) 
-	    printf("  %s\n",unit[i]);
-	    */
 }
 
-void parse_binary()
+void parse_binary(FILE *in)
 {
 	char c, tf=0, i;
 		
@@ -92,20 +83,20 @@ void parse_binary()
              */
 
 	    if (!tf) { 
-		i = fread(u.b, 8, 1, stdin);
+		i = fread(u.b, 8, 1, in);
 	        if (!i) break;
 	        
-	        printf("%f, ",u.d);
+	        printf("%.12f, ",u.d);
 	    } else {
-		    i = fread(u.b, 4, 1, stdin);
+		    i = fread(u.b, 4, 1, in);
 		    if (!i) break;
 
 		    if (tf>=n-1) {
 		      tf = -1;
-		      printf("%f\n",u.f);
+		      printf("%.12g\n",u.f);
 		    }
 		    else {
-		    	printf("%f, ",u.f);
+		    	printf("%.12g, ",u.f);
 		    }
 	    }
 	    
@@ -115,19 +106,40 @@ void parse_binary()
 
 int main(int argc, char**argv)
 {
-	int noText = 1;
+	FILE *f;
+	int header = 0, ix=1;
 
-	if (argc>1) {
-		if (!strcmp("-t",argv[1]))
-			noText = 0;
-		else {
-		    puts("usage: lt2csv < file.raw");
-		    puts("       lt2csv -t < file.raw [header only]");
-		    exit(0);
+	while (argc>1) {
+		if (!strcmp("-t",argv[ix])) {
+			header = 1;
+			argc--;
+			ix++;
+			continue;
 		}
+
+		if (!strcmp("-h",argv[ix])) {
+			puts("usage: lt2csv [<] file.raw");
+			puts("       lt2csv -t [<] file.raw [prints header only]");
+			exit(0);
+		}
+
+		f = fopen(argv[ix],"r");
+
+		if (header) {
+		    fseek(f,0L,SEEK_END);
+		    printf("bytes %ld\n",ftell(f));
+		    rewind(f);
+		}
+
+	    break;
 	}
 
-    parse_text(noText);
+	if (f==NULL) {
+		f = stdin;
+	}
 
-    parse_binary();
+	parse_text(header,f);
+
+	if (!header)
+        parse_binary(f);
 }
