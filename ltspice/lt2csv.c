@@ -68,39 +68,40 @@ void parse_text(int print, FILE *in)
 
 void parse_binary(FILE *in)
 {
-	char c, tf=0, i;
+	int i, col, row;
 		
 	union {
-		float f;
 		char b[8];
+		float f;
 		double d;
 	} u;
 	
-	while ( 1 ) {
+	for (row=0; row<m; row++) {
 		
-            /* first float is 8 bytes (time),
-             * rest is 4 byte.
-             */
+        /* first float is 8 bytes (time),
+         * rest is 4 byte.
+         */
 
-	    if (!tf) { 
-		i = fread(u.b, 8, 1, in);
-	        if (!i) break;
-	        
-	        printf("%.12f, ",u.d);
-	    } else {
-		    i = fread(u.b, 4, 1, in);
-		    if (!i) break;
+		for (col=0;col<n;col++) {
 
-		    if (tf>=n-1) {
-		      tf = -1;
-		      printf("%.12g\n",u.f);
-		    }
-		    else {
-		    	printf("%.12g, ",u.f);
-		    }
-	    }
-	    
-	    tf++;
+			if (col) {
+				i = fread(u.b, 4, 1, in);
+				printf("%.12g",u.f);
+
+				if (col<n-1)
+					printf(", ");
+			}
+			else {
+				i = fread(u.b, 8, 1, in);
+				printf("%.12f, ",u.d);
+			}
+
+			if (!i) break;
+		}
+
+		puts("");
+
+		if (!i) break;
 	}
 }
 
